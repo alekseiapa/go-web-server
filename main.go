@@ -4,39 +4,34 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
-func formHandler(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		fmt.Fprintf(w, "%v", err)
-		return
-	}
-	fmt.Fprintf(w, "POST request successful")
-	name := r.FormValue("name")
-	address := r.FormValue("address")
-	fmt.Printf("Name: %v, Address: %v", name, address)
+type Movie struct {
+	ID       string    `json:"id"`
+	Isbn     string    `json:"isbn"`
+	Title    string    `json:"title"`
+	Director *Director `json:"director"`
 }
 
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/hello" {
-		http.Error(w, "Invalid URL", http.StatusNotFound)
-		return
-	}
-	if r.Method != "GET" {
-		http.Error(w, "Invalid method", http.StatusNotFound)
-		return
-	}
-	fmt.Fprintf(w, "Hello %s", r.URL.Path)
+type Director struct {
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
 }
+
+var movies []Movie
 
 func main() {
-	fileServer := http.FileServer(http.Dir("./static"))
-	http.Handle("/", fileServer)
-	http.HandleFunc("/form", formHandler)
-	http.HandleFunc("/hello", helloHandler)
+	r := mux.NewRouter()
 
-	fmt.Printf("Starting server on port 5050\n")
-	if err := http.ListenAndServe(":5050", nil); err != nil {
-		log.Fatal(err)
-	}
+	r.HandleFunc("/movies", getMovies).Methods("GET")
+	r.HandleFunc("/movies/[id]", getMovie).Methods("GET")
+	r.HandleFunc("/movies/", createMovie).Methods("POST")
+	r.HandleFunc("/movies/[id]", updateMovie).Methods("PUT")
+	r.HandleFunc("/movies/[id]", deleteMovie).Methods("DELETE")
+
+	fmt.Printf("Starting server on port 5050")
+	log.Fatal(http.ListenAndServe(":5050", r))
+
 }
